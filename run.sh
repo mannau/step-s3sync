@@ -8,10 +8,10 @@ set_auth() {
   fi
 
   echo '[default]' > "$s3cnf"
-  echo "access_key=$WERCKER_S3SYNC_KEY_ID" >> "$s3cnf"
-  echo "secret_key=$WERCKER_S3SYNC_KEY_SECRET" >> "$s3cnf"
+  echo "access_key=$WERCKER_S3GET_KEY_ID" >> "$s3cnf"
+  echo "secret_key=$WERCKER_S3GET_KEY_SECRET" >> "$s3cnf"
 
-  debug "generated .s3cfg for key $WERCKER_S3SYNC_KEY_ID"
+  debug "generated .s3cfg for key $WERCKER_S3GET_KEY_ID"
 }
 
 main() {
@@ -19,33 +19,19 @@ main() {
 
   info 'starting s3 synchronisation'
 
-  if [ ! -n "$WERCKER_S3SYNC_KEY_ID" ]; then
+  if [ ! -n "$WERCKER_S3GET_KEY_ID" ]; then
     fail 'missing or empty option key_id, please check wercker.yml'
   fi
 
-  if [ ! -n "$WERCKER_S3SYNC_KEY_SECRET" ]; then
+  if [ ! -n "$WERCKER_S3GET_KEY_SECRET" ]; then
     fail 'missing or empty option key_secret, please check wercker.yml'
   fi
 
-  if [ ! -n "$WERCKER_S3SYNC_BUCKET_URL" ]; then
+  if [ ! -n "$WERCKER_S3GET_BUCKET_URL" ]; then
     fail 'missing or empty option bucket_url, please check wercker.yml'
   fi
 
-  if [ ! -n "$WERCKER_S3SYNC_OPTS" ]; then
-    export WERCKER_S3SYNC_OPTS="--acl-public"
-  fi
-
-  if [ -n "$WERCKER_S3SYNC_DELETE_REMOVED" ]; then
-      if [ "$WERCKER_S3SYNC_DELETE_REMOVED" = "true" ]; then
-          export WERCKER_S3SYNC_DELETE_REMOVED="--delete-removed"
-      else
-          unset WERCKER_S3SYNC_DELETE_REMOVED
-      fi
-  else
-      export WERCKER_S3SYNC_DELETE_REMOVED="--delete-removed"
-  fi
-
-  source_dir="$WERCKER_ROOT/$WERCKER_S3SYNC_SOURCE_DIR"
+  source_files="$WERCKER_ROOT/$WERCKER_S3GET_SOURCE_FILES"
   if cd "$source_dir";
   then
       debug "changed directory $source_dir, content is: $(ls -l)"
@@ -54,16 +40,16 @@ main() {
   fi
 
   set +e
-  local SYNC="$WERCKER_STEP_ROOT/s3cmd sync $WERCKER_S3SYNC_OPTS $WERCKER_S3SYNC_DELETE_REMOVED --verbose ./ $WERCKER_S3SYNC_BUCKET_URL"
-  debug "$SYNC"
-  local sync_output=$($SYNC)
+  local GET="$WERCKER_STEP_ROOT/s3cmd get --verbose $WERCKER_S3SYNC_BUCKET_URL/$source_files"
+  debug "$GET"
+  local get_output=$($GET)
 
   if [[ $? -ne 0 ]];then
-      echo "$sync_output"
-      fail 's3cmd failed';
+      echo "$get_output"
+      fail 's3get failed';
   else
-      echo "$sync_output"
-      success 'finished s3 synchronisation';
+      echo "$get_output"
+      success 'finished s3 file retrieval';
   fi
   set -e
 }
